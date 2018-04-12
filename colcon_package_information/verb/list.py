@@ -1,7 +1,6 @@
 # Copyright 2016-2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
-from colcon_core.package_decorator import get_decorators
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
 from colcon_core.package_selection import get_package_descriptors
@@ -72,11 +71,9 @@ class ListVerb(VerbExtensionPoint):
 
         descriptors = get_package_descriptors(args)
 
-        if args.topological_order:
-            decorators = topological_order_packages(
-                descriptors, recursive_categories=('run', ))
-        else:
-            decorators = get_decorators(descriptors)
+        # always perform topological order for the select package extensions
+        decorators = topological_order_packages(
+            descriptors, recursive_categories=('run', ))
 
         select_package_decorators(args, decorators)
 
@@ -158,6 +155,9 @@ class ListVerb(VerbExtensionPoint):
             lines.append('}')
 
         else:
+            if not args.topological_order:
+                decorators = sorted(
+                    decorators, key=lambda d: d.descriptor.name)
             lines = []
             for decorator in decorators:
                 if not decorator.selected:
