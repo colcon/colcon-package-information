@@ -1,6 +1,8 @@
 # Copyright 2016-2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
+import sys
+
 from colcon_core.package_decorator import add_recursive_dependencies
 from colcon_core.package_decorator import get_decorators
 from colcon_core.package_selection import add_arguments \
@@ -20,28 +22,36 @@ class InfoVerb(VerbExtensionPoint):
 
     def add_arguments(self, *, parser):  # noqa: D102
         parser.add_argument(
-            'path', nargs='?',
-            help='Specific path to check for package (ignore other discovery '
-                 'arguments)')
+            'package_names', nargs='*', metavar='PKG_NAME',
+            help='Only show the information of a subset of packages')
         add_packages_arguments(parser)
 
     def main(self, *, context):  # noqa: D102
-        # modify args to match path discovery extension
-        if context.args.path is not None:
-            context.args.paths = [context.args.path]
-
         descriptors = get_package_descriptors(
             context.args, additional_argument_names=['*'])
         decorators = get_decorators(descriptors)
-        if context.args.path is None:
-            add_recursive_dependencies(
-                decorators, recursive_categories=('run', ))
-            select_package_decorators(context.args, decorators)
+        add_recursive_dependencies(
+            decorators, recursive_categories=('run', ))
+        select_package_decorators(context.args, decorators)
 
-        if not descriptors:
-            return 'No package found'
+        if context.args.package_names:
+            all_package_names = {d.descriptor.name for d in decorators}
+            # warn about passed package names which are unknown
+            for pkg_name in context.args.package_names:
+                if pkg_name not in all_package_names:
+                    print(
+                        "Package '{pkg_name}' not found".format_map(locals()),
+                        file=sys.stderr)
+            # filter decorators using passed package names
+            decorators = [
+                d for d in decorators
+                if d.descriptor.name in context.args.package_names]
+            if not decorators:
+                return 1
+        if not decorators:
+            return 'No packages found'
 
-        for decorator in decorators:
+        for decorator in sorted(decorators, key=lambda d: d.descriptor.name):
             if not decorator.selected:
                 continue
             pkg = decorator.descriptor
