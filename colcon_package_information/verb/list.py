@@ -1,6 +1,9 @@
 # Copyright 2016-2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
+from collections import defaultdict
+from collections import OrderedDict
+
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
 from colcon_core.package_selection import get_package_descriptors
@@ -48,7 +51,8 @@ class ListVerb(VerbExtensionPoint):
             action='store_true',
             default=False,
             help='Output topological graph in DOT '
-                 '(e.g. pass the output to dot: ` | dot -Tpng -o graph.png`)')
+                 '(e.g. pass the output to dot: ` | dot -Tpng -o graph.png`), '
+                 'legend: blue=build, red=run, tan=test, dashed=indirect')
 
         parser.add_argument(
             '--topological-graph-density',
@@ -132,26 +136,60 @@ class ListVerb(VerbExtensionPoint):
             selected_pkg_names = [
                 m.descriptor.name for m in decorators if m.selected]
 
-            def add_edges(decorator, dependencies, *, direct=True):
-                for dep in dependencies:
-                    if dep not in decorators_by_name:
-                        continue
-                    if dep in selected_pkg_names:
-                        lines.append(
-                            '  "%s" -> "%s"%s;' % (
-                                decorator.descriptor.name, dep,
-                                ' [style="dashed"]' if not direct else ''),
-                        )
-                    else:
-                        descriptor = decorators_by_name[dep].descriptor
-                        add_edges(
-                            decorator, descriptor.get_dependencies(),
-                            direct=False)
-
-            for decorator in decorators:
-                if not decorator.selected:
+            direct_edges = defaultdict(set)
+            for deco in reversed(decorators):
+                if not deco.selected:
                     continue
-                add_edges(decorator, decorator.descriptor.get_dependencies())
+                # output selected packages as nodes
+                lines.append(
+                    '  "{deco.descriptor.name}";'.format_map(locals()))
+                # collect direct dependencies
+                for cat, deps in deco.descriptor.dependencies.items():
+                    for dep in deps:
+                        if dep not in selected_pkg_names:
+                            continue
+                        direct_edges[(deco.descriptor.name, dep)].add(cat)
+
+            indirect_edges = defaultdict(set)
+            for deco in reversed(decorators):
+                if not deco.selected:
+                    continue
+                # collect indirect dependencies
+                for cat, deps in deco.descriptor.dependencies.items():
+                    for dep in deps:
+                        if dep in selected_pkg_names:
+                            continue
+                        if dep not in decorators_by_name:
+                            continue
+                        d = decorators_by_name[dep]
+                        for rdep in d.recursive_dependencies:
+                            if rdep not in selected_pkg_names:
+                                continue
+                            # skip redundant edges
+                            if (deco.descriptor.name, rdep) in direct_edges:
+                                continue
+                            indirect_edges[(deco.descriptor.name, rdep)].add(
+                                cat)
+
+            # output edges
+            color_mapping = OrderedDict((
+                ('build', 'blue'),
+                ('run', 'red'),
+                ('test', 'tan'),
+            ))
+            for style, edges in zip(
+                ('', ', style="dashed"'),
+                (direct_edges, indirect_edges),
+            ):
+                for (node_start, node_end), categories in edges.items():
+                    colors = ':'.join([
+                        color for cat, color in color_mapping.items()
+                        if cat in categories])
+                    lines.append(
+                        '  "{node_start}" -> "{node_end}" '
+                        '[color="{colors}"{style}];'
+                        .format_map(locals()))
+
             lines.append('}')
 
         else:
