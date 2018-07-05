@@ -55,14 +55,14 @@ class ListVerb(VerbExtensionPoint):
             action='store_true',
             default=False,
             help='Output density for topological graph (only affects '
-                 '--topological-order)')
+                 '--topological-graph)')
 
         parser.add_argument(
             '--topological-graph-legend',
             action='store_true',
             default=False,
             help='Output legend for topological graph (only affects '
-                 '--topological-order)')
+                 '--topological-graph)')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
