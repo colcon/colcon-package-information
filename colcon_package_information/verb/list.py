@@ -144,18 +144,18 @@ class ListVerb(VerbExtensionPoint):
                 lines.append(
                     '  "{deco.descriptor.name}";'.format_map(locals()))
                 # collect direct dependencies
-                for cat, deps in deco.descriptor.dependencies.items():
+                for category, deps in deco.descriptor.dependencies.items():
                     for dep in deps:
                         if dep not in selected_pkg_names:
                             continue
-                        direct_edges[(deco.descriptor.name, dep)].add(cat)
+                        direct_edges[(deco.descriptor.name, dep)].add(category)
 
             indirect_edges = defaultdict(set)
             for deco in reversed(decorators):
                 if not deco.selected:
                     continue
                 # collect indirect dependencies
-                for cat, deps in deco.descriptor.dependencies.items():
+                for category, deps in deco.descriptor.dependencies.items():
                     for dep in deps:
                         if dep in selected_pkg_names:
                             continue
@@ -169,7 +169,7 @@ class ListVerb(VerbExtensionPoint):
                             if (deco.descriptor.name, rdep) in direct_edges:
                                 continue
                             indirect_edges[(deco.descriptor.name, rdep)].add(
-                                cat)
+                                category)
 
             # output edges
             color_mapping = OrderedDict((
@@ -183,8 +183,8 @@ class ListVerb(VerbExtensionPoint):
             ):
                 for (node_start, node_end), categories in edges.items():
                     colors = ':'.join([
-                        color for cat, color in color_mapping.items()
-                        if cat in categories])
+                        color for category, color in color_mapping.items()
+                        if category in categories])
                     lines.append(
                         '  "{node_start}" -> "{node_end}" '
                         '[color="{colors}"{style}];'
