@@ -204,8 +204,9 @@ class ListVerb(VerbExtensionPoint):
                                 category)
 
             try:
-                # HACK Python 3.5 fails when passing odict_values directly
-                common_path = os.path.commonpath(tuple(nodes.values()))
+                # HACK Python 3.5 can't handle Path objects
+                common_path = os.path.commonpath(
+                    [str(p) for p in nodes.values()])
             except ValueError:
                 common_path = None
 
