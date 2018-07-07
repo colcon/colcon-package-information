@@ -3,6 +3,9 @@
 
 from collections import defaultdict
 from collections import OrderedDict
+import itertools
+import os
+from pathlib import Path
 
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
@@ -67,6 +70,12 @@ class ListVerb(VerbExtensionPoint):
             default=False,
             help='Output legend for topological graph (only affects '
                  '--topological-graph)')
+        parser.add_argument(
+            '--topological-graph-dot-cluster',
+            action='store_true',
+            default=False,
+            help='Cluster packages by their filesystem path '
+                 '(only affects --topological-graph-dot)')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
@@ -132,44 +141,116 @@ class ListVerb(VerbExtensionPoint):
 
         elif args.topological_graph_dot:
             lines = ['digraph graphname {']
-            decorators_by_name = {m.descriptor.name: m for m in decorators}
+
+            decorators_by_name = defaultdict(set)
+            for deco in decorators:
+                decorators_by_name[deco.descriptor.name].add(deco)
+
             selected_pkg_names = [
                 m.descriptor.name for m in decorators if m.selected]
+            has_duplicate_names = \
+                len(selected_pkg_names) != len(set(selected_pkg_names))
+            selected_pkg_names = set(selected_pkg_names)
 
+            # collect selected package descriptors and their parent path
+            nodes = OrderedDict()
+            for deco in reversed(decorators):
+                if not deco.selected:
+                    continue
+                nodes[deco.descriptor] = Path(deco.descriptor.path).parent
+
+            # collect direct dependencies
             direct_edges = defaultdict(set)
             for deco in reversed(decorators):
                 if not deco.selected:
                     continue
-                # output selected packages as nodes
-                lines.append(
-                    '  "{deco.descriptor.name}";'.format_map(locals()))
-                # collect direct dependencies
+                # iterate over dependency categories
                 for category, deps in deco.descriptor.dependencies.items():
+                    # iterate over dependencies
                     for dep in deps:
                         if dep not in selected_pkg_names:
                             continue
-                        direct_edges[(deco.descriptor.name, dep)].add(category)
+                        # store the category of each dependency
+                        # use the decorator descriptor
+                        # since there might be packages with the same name
+                        direct_edges[(deco.descriptor, dep)].add(category)
 
+            # collect indirect dependencies
             indirect_edges = defaultdict(set)
             for deco in reversed(decorators):
                 if not deco.selected:
                     continue
-                # collect indirect dependencies
+                # iterate over dependency categories
                 for category, deps in deco.descriptor.dependencies.items():
+                    # iterate over dependencies
                     for dep in deps:
+                        # ignore direct dependencies
                         if dep in selected_pkg_names:
                             continue
-                        if dep not in decorators_by_name:
+                        # ignore unknown dependencies
+                        if dep not in decorators_by_name.keys():
                             continue
-                        d = decorators_by_name[dep]
-                        for rdep in d.recursive_dependencies:
+                        # iterate over recursive dependencies
+                        for rdep in itertools.chain.from_iterable(
+                            d.recursive_dependencies
+                            for d in decorators_by_name[dep]
+                        ):
                             if rdep not in selected_pkg_names:
                                 continue
-                            # skip redundant edges
-                            if (deco.descriptor.name, rdep) in direct_edges:
+                            # skip edges which are redundant to direct edges
+                            if (deco.descriptor, rdep) in direct_edges:
                                 continue
-                            indirect_edges[(deco.descriptor.name, rdep)].add(
+                            indirect_edges[(deco.descriptor, rdep)].add(
                                 category)
+
+            try:
+                # HACK Python 3.5 can't handle Path objects
+                common_path = os.path.commonpath(
+                    [str(p) for p in nodes.values()])
+            except ValueError:
+                common_path = None
+
+            def get_node_data(descriptor):
+                nonlocal has_duplicate_names
+                if not has_duplicate_names:
+                    # use name where possible so the dot code is easy to read
+                    return descriptor.name, ''
+                # otherwise append the descriptor id to make each node unique
+                descriptor_id = id(descriptor)
+                return (
+                    '{descriptor.name}_{descriptor_id}'.format_map(locals()),
+                    ' [label = "{descriptor.name}"]'.format_map(locals()),
+                )
+
+            if not args.topological_graph_dot_cluster or common_path is None:
+                # output nodes
+                for desc in nodes.keys():
+                    node_name, attributes = get_node_data(desc)
+                    lines.append(
+                        '  "{node_name}"{attributes};'.format_map(locals()))
+            else:
+                # output clusters
+                clusters = defaultdict(set)
+                for desc, path in nodes.items():
+                    clusters[path.relative_to(common_path)].add(desc)
+                for i, cluster in zip(range(len(clusters)), clusters.items()):
+                    path, descs = cluster
+                    if path.name:
+                        # wrap cluster in subgraph
+                        lines.append(
+                            '  subgraph cluster_{i} {{'.format_map(locals()))
+                        lines.append(
+                            '    label = "{path}";'.format_map(locals()))
+                        indent = '    '
+                    else:
+                        indent = '  '
+                    for desc in descs:
+                        node_name, attributes = get_node_data(desc)
+                        lines.append(
+                            '{indent}"{node_name}"{attributes};'
+                            .format_map(locals()))
+                    if path.name:
+                        lines.append('  }')
 
             # output edges
             color_mapping = OrderedDict((
@@ -181,14 +262,16 @@ class ListVerb(VerbExtensionPoint):
                 ('', ', style="dashed"'),
                 (direct_edges, indirect_edges),
             ):
-                for (node_start, node_end), categories in edges.items():
+                for (desc_start, node_end), categories in edges.items():
                     colors = ':'.join([
                         color for category, color in color_mapping.items()
                         if category in categories])
-                    lines.append(
-                        '  "{node_start}" -> "{node_end}" '
-                        '[color="{colors}"{style}];'
-                        .format_map(locals()))
+                    start_name, _ = get_node_data(desc_start)
+                    for deco in decorators_by_name[node_end]:
+                        end_name, _ = get_node_data(deco.descriptor)
+                        lines.append(
+                            '  "{start_name}" -> "{end_name}" '
+                            '[color="{colors}"{style}];'.format_map(locals()))
 
             lines.append('}')
 
