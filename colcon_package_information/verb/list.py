@@ -7,6 +7,7 @@ import itertools
 import os
 from pathlib import Path
 
+from colcon_core.dependency_descriptor import dependency_name
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
 from colcon_core.package_selection import get_package_descriptors
@@ -120,10 +121,16 @@ class ListVerb(VerbExtensionPoint):
                     if j == i:
                         # package i is being processed
                         lines[j] += '+'
-                    elif shown_decorators[j].descriptor.name in depends[i]:
+                    elif (
+                        shown_decorators[j].descriptor.name in
+                        {dependency_name(d) for d in depends[i]}
+                    ):
                         # package i directly depends on package j
                         lines[j] += '*'
-                    elif shown_decorators[j].descriptor.name in rec_depends[i]:
+                    elif (
+                        shown_decorators[j].descriptor.name in
+                        {dependency_name(d) for d in rec_depends[i]}
+                    ):
                         # package i recursively depends on package j
                         lines[j] += '.'
                     else:
@@ -168,7 +175,7 @@ class ListVerb(VerbExtensionPoint):
                 for category, deps in deco.descriptor.dependencies.items():
                     # iterate over dependencies
                     for dep in deps:
-                        if dep not in selected_pkg_names:
+                        if dependency_name(dep) not in selected_pkg_names:
                             continue
                         # store the category of each dependency
                         # use the decorator descriptor
@@ -185,15 +192,16 @@ class ListVerb(VerbExtensionPoint):
                     # iterate over dependencies
                     for dep in deps:
                         # ignore direct dependencies
-                        if dep in selected_pkg_names:
+                        if dependency_name(dep) in selected_pkg_names:
                             continue
                         # ignore unknown dependencies
-                        if dep not in decorators_by_name.keys():
+                        if dependency_name(dep) not in \
+                                decorators_by_name.keys():
                             continue
                         # iterate over recursive dependencies
                         for rdep in itertools.chain.from_iterable(
                             d.recursive_dependencies
-                            for d in decorators_by_name[dep]
+                            for d in decorators_by_name[dependency_name(dep)]
                         ):
                             if rdep not in selected_pkg_names:
                                 continue
