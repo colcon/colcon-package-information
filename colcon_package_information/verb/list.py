@@ -24,6 +24,13 @@ class ListVerb(VerbExtensionPoint):
         satisfies_version(VerbExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
     def add_arguments(self, *, parser):  # noqa: D102
+        # only added so that package selection arguments can be used
+        # which use the build directory to store state information
+        parser.add_argument(
+            '--build-base',
+            default='build',
+            help='The base path for all build directories (default: build)')
+
         add_packages_arguments(parser)
 
         parser.add_argument(
