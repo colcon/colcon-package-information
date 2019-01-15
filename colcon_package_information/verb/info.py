@@ -24,6 +24,14 @@ class InfoVerb(VerbExtensionPoint):
         parser.add_argument(
             'package_names', nargs='*', metavar='PKG_NAME',
             help='Only show the information of a subset of packages')
+
+        # only added so that package selection arguments can be used
+        # which use the build directory to store state information
+        parser.add_argument(
+            '--build-base',
+            default='build',
+            help='The base path for all build directories (default: build)')
+
         add_packages_arguments(parser)
 
     def main(self, *, context):  # noqa: D102
