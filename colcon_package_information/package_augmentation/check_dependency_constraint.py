@@ -2,12 +2,12 @@
 # Licensed under the Apache License, Version 2.0
 
 import operator
-from pkg_resources import parse_version
 
 from colcon_core.package_augmentation import logger as \
     package_augmentation_logger
 from colcon_core.package_augmentation import PackageAugmentationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
+from pkg_resources import parse_version
 
 logger = package_augmentation_logger.getChild('check_dependency_constraint')
 
