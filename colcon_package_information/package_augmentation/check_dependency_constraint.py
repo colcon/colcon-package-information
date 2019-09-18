@@ -82,7 +82,7 @@ class CheckDependencyConstraintPackageAugmentation(
 
             op, msg = operators[key]
             if not op(dep_version, version_constraint):
-                logger.warn(
+                logger.warning(
                     desc.name + ' depends on ' + dep.name +
                     ' which has version ' + dep_desc.metadata['version'] +
                     ' but expects it to be ' + msg + ' ' + value)
