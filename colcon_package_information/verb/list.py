@@ -83,6 +83,12 @@ class ListVerb(VerbExtensionPoint):
             default=False,
             help='Cluster packages by their filesystem path '
                  '(only affects --topological-graph-dot)')
+        parser.add_argument(
+            '--topological-graph-dot-include-skipped',
+            action='store_true',
+            default=False,
+            help='Also output skipped packages (only affects '
+                 '--topological-graph-dot)')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
@@ -154,7 +160,8 @@ class ListVerb(VerbExtensionPoint):
                 decorators_by_name[deco.descriptor.name].add(deco)
 
             selected_pkg_names = [
-                m.descriptor.name for m in decorators if m.selected]
+                m.descriptor.name for m in decorators
+                if m.selected or args.topological_graph_dot_include_skipped]
             has_duplicate_names = \
                 len(selected_pkg_names) != len(set(selected_pkg_names))
             selected_pkg_names = set(selected_pkg_names)
@@ -162,14 +169,16 @@ class ListVerb(VerbExtensionPoint):
             # collect selected package decorators and their parent path
             nodes = OrderedDict()
             for deco in reversed(decorators):
-                if not deco.selected:
-                    continue
-                nodes[deco] = Path(deco.descriptor.path).parent
+                if deco.selected or args.topological_graph_dot_include_skipped:
+                    nodes[deco] = Path(deco.descriptor.path).parent
 
             # collect direct dependencies
             direct_edges = defaultdict(set)
             for deco in reversed(decorators):
-                if not deco.selected:
+                if (
+                    not deco.selected and
+                    not args.topological_graph_dot_include_skipped
+                ):
                     continue
                 # iterate over dependency categories
                 for category, deps in deco.descriptor.dependencies.items():
@@ -217,10 +226,15 @@ class ListVerb(VerbExtensionPoint):
                 common_path = None
 
             def get_node_data(decorator):
+                nonlocal args
                 nonlocal has_duplicate_names
                 if not has_duplicate_names:
                     # use name where possible so the dot code is easy to read
-                    return decorator.descriptor.name, ''
+                    return decorator.descriptor.name, \
+                        '' if (
+                            decorator.selected or
+                            not args.topological_graph_dot_include_skipped
+                        ) else '[color = "gray" fontcolor = "gray"]'
                 # otherwise append the descriptor id to make each node unique
                 descriptor_id = id(decorator.descriptor)
                 return (
@@ -233,6 +247,11 @@ class ListVerb(VerbExtensionPoint):
             if not args.topological_graph_dot_cluster or common_path is None:
                 # output nodes
                 for deco in nodes.keys():
+                    if (
+                        not deco.selected and
+                        not args.topological_graph_dot_include_skipped
+                    ):
+                        continue
                     node_name, attributes = get_node_data(deco)
                     lines.append(
                         '  "{node_name}"{attributes};'.format_map(locals()))

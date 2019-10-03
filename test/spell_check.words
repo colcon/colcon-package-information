@@ -1,9 +1,11 @@
 apache
 colcon
 commonpath
+decos
 defaultdict
 deps
 descs
+fontcolor
 graphname
 iterdir
 itertools
