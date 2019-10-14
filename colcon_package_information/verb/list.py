@@ -83,6 +83,12 @@ class ListVerb(VerbExtensionPoint):
             default=False,
             help='Cluster packages by their filesystem path '
                  '(only affects --topological-graph-dot)')
+        parser.add_argument(
+            '--topological-graph-dot-include-skipped',
+            action='store_true',
+            default=False,
+            help='Also output skipped packages (only affects '
+                 '--topological-graph-dot)')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
@@ -154,22 +160,25 @@ class ListVerb(VerbExtensionPoint):
                 decorators_by_name[deco.descriptor.name].add(deco)
 
             selected_pkg_names = [
-                m.descriptor.name for m in decorators if m.selected]
+                m.descriptor.name for m in decorators
+                if m.selected or args.topological_graph_dot_include_skipped]
             has_duplicate_names = \
                 len(selected_pkg_names) != len(set(selected_pkg_names))
             selected_pkg_names = set(selected_pkg_names)
 
-            # collect selected package descriptors and their parent path
+            # collect selected package decorators and their parent path
             nodes = OrderedDict()
             for deco in reversed(decorators):
-                if not deco.selected:
-                    continue
-                nodes[deco.descriptor] = Path(deco.descriptor.path).parent
+                if deco.selected or args.topological_graph_dot_include_skipped:
+                    nodes[deco] = Path(deco.descriptor.path).parent
 
             # collect direct dependencies
             direct_edges = defaultdict(set)
             for deco in reversed(decorators):
-                if not deco.selected:
+                if (
+                    not deco.selected and
+                    not args.topological_graph_dot_include_skipped
+                ):
                     continue
                 # iterate over dependency categories
                 for category, deps in deco.descriptor.dependencies.items():
@@ -178,9 +187,9 @@ class ListVerb(VerbExtensionPoint):
                         if dep not in selected_pkg_names:
                             continue
                         # store the category of each dependency
-                        # use the decorator descriptor
+                        # use the decorator
                         # since there might be packages with the same name
-                        direct_edges[(deco.descriptor, dep)].add(category)
+                        direct_edges[(deco, dep)].add(category)
 
             # collect indirect dependencies
             indirect_edges = defaultdict(set)
@@ -205,10 +214,9 @@ class ListVerb(VerbExtensionPoint):
                             if rdep not in selected_pkg_names:
                                 continue
                             # skip edges which are redundant to direct edges
-                            if (deco.descriptor, rdep) in direct_edges:
+                            if (deco, rdep) in direct_edges:
                                 continue
-                            indirect_edges[(deco.descriptor, rdep)].add(
-                                category)
+                            indirect_edges[(deco, rdep)].add(category)
 
             try:
                 # HACK Python 3.5 can't handle Path objects
@@ -217,31 +225,43 @@ class ListVerb(VerbExtensionPoint):
             except ValueError:
                 common_path = None
 
-            def get_node_data(descriptor):
+            def get_node_data(decorator):
+                nonlocal args
                 nonlocal has_duplicate_names
                 if not has_duplicate_names:
                     # use name where possible so the dot code is easy to read
-                    return descriptor.name, ''
+                    return decorator.descriptor.name, \
+                        '' if (
+                            decorator.selected or
+                            not args.topological_graph_dot_include_skipped
+                        ) else '[color = "gray" fontcolor = "gray"]'
                 # otherwise append the descriptor id to make each node unique
-                descriptor_id = id(descriptor)
+                descriptor_id = id(decorator.descriptor)
                 return (
-                    '{descriptor.name}_{descriptor_id}'.format_map(locals()),
-                    ' [label = "{descriptor.name}"]'.format_map(locals()),
+                    '{decorator.descriptor.name}_{descriptor_id}'
+                    .format_map(locals()),
+                    ' [label = "{decorator.descriptor.name}"]'
+                    .format_map(locals()),
                 )
 
             if not args.topological_graph_dot_cluster or common_path is None:
                 # output nodes
-                for desc in nodes.keys():
-                    node_name, attributes = get_node_data(desc)
+                for deco in nodes.keys():
+                    if (
+                        not deco.selected and
+                        not args.topological_graph_dot_include_skipped
+                    ):
+                        continue
+                    node_name, attributes = get_node_data(deco)
                     lines.append(
                         '  "{node_name}"{attributes};'.format_map(locals()))
             else:
                 # output clusters
                 clusters = defaultdict(set)
-                for desc, path in nodes.items():
-                    clusters[path.relative_to(common_path)].add(desc)
+                for deco, path in nodes.items():
+                    clusters[path.relative_to(common_path)].add(deco)
                 for i, cluster in zip(range(len(clusters)), clusters.items()):
-                    path, descs = cluster
+                    path, decos = cluster
                     if path.name:
                         # wrap cluster in subgraph
                         lines.append(
@@ -251,8 +271,8 @@ class ListVerb(VerbExtensionPoint):
                         indent = '    '
                     else:
                         indent = '  '
-                    for desc in descs:
-                        node_name, attributes = get_node_data(desc)
+                    for deco in decos:
+                        node_name, attributes = get_node_data(deco)
                         lines.append(
                             '{indent}"{node_name}"{attributes};'
                             .format_map(locals()))
@@ -269,13 +289,13 @@ class ListVerb(VerbExtensionPoint):
                 ('', ', style="dashed"'),
                 (direct_edges, indirect_edges),
             ):
-                for (desc_start, node_end), categories in edges.items():
+                for (deco_start, node_end), categories in edges.items():
                     colors = ':'.join([
                         color for category, color in color_mapping.items()
                         if category in categories])
-                    start_name, _ = get_node_data(desc_start)
+                    start_name, _ = get_node_data(deco_start)
                     for deco in decorators_by_name[node_end]:
-                        end_name, _ = get_node_data(deco.descriptor)
+                        end_name, _ = get_node_data(deco)
                         lines.append(
                             '  "{start_name}" -> "{end_name}" '
                             '[color="{colors}"{style}];'.format_map(locals()))
