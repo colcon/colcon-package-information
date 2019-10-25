@@ -273,6 +273,41 @@ class GraphVerb(VerbExtensionPoint):
                             '  "{start_name}" -> "{end_name}" '
                             '[color="{colors}"{style}];'.format_map(locals()))
 
+            if args.legend:
+                lines.append('  subgraph cluster_legend {')
+                lines.append('    color=gray')
+                lines.append('    label="Legend";')
+                lines.append('    margin=0;')
+                # invisible nodes between the dependency edges
+                lines.append('    node [label="", shape=none];')
+
+                previous_node = '_legend_first'
+                # an edge for each dependency type
+                for dependency_type, color in color_mapping.items():
+                    next_node = '_legend_' + dependency_type
+                    lines.append(
+                        '    {previous_node} -> {next_node} '
+                        '[label="{dependency_type} dep.", color="{color}"];'
+                        .format_map(locals()))
+                    previous_node = next_node
+                lines.append(
+                    '    {previous_node} -> _legend_last '
+                    '[label="indirect dep.", style="dashed"];'
+                    .format_map(locals()))
+
+                # layout all legend nodes on the same rank
+                lines.append('    {')
+                lines.append('      rank=same;')
+                lines.append('      _legend_first;')
+                for dependency_type in color_mapping.keys():
+                    lines.append(
+                        '      _legend_{dependency_type};'
+                        .format_map(locals()))
+                lines.append('      _legend_last;')
+                lines.append('    }')
+
+                lines.append('  }')
+
             lines.append('}')
 
         for line in lines:
