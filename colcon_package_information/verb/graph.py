@@ -16,8 +16,8 @@ from colcon_core.topological_order import topological_order_packages
 from colcon_core.verb import VerbExtensionPoint
 
 
-class ListVerb(VerbExtensionPoint):
-    """List packages, optionally in topological ordering."""
+class GraphVerb(VerbExtensionPoint):
+    """Generate a visual representation of the dependency graph."""
 
     def __init__(self):  # noqa: D107
         super().__init__()
@@ -34,30 +34,7 @@ class ListVerb(VerbExtensionPoint):
         add_packages_arguments(parser)
 
         parser.add_argument(
-            '--topological-order', '-t',
-            action='store_true',
-            default=False,
-            help='Order output based on topological ordering (breadth-first)')
-
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument(
-            '--names-only', '-n',
-            action='store_true',
-            default=False,
-            help='Output only the name of each package but not the path')
-        group.add_argument(
-            '--paths-only', '-p',
-            action='store_true',
-            default=False,
-            help='Output only the path of each package but not the name')
-        group.add_argument(
-            '--topological-graph', '-g',
-            action='store_true',
-            default=False,
-            help='Output topological graph in ASCII '
-                 '(implies --topological-order)')
-        group.add_argument(
-            '--topological-graph-dot',
+            '--dot',
             action='store_true',
             default=False,
             help='Output topological graph in DOT '
@@ -65,46 +42,40 @@ class ListVerb(VerbExtensionPoint):
                  'legend: blue=build, red=run, tan=test, dashed=indirect')
 
         parser.add_argument(
-            '--topological-graph-density',
+            '--density',
             action='store_true',
             default=False,
-            help='Output density for topological graph (only affects '
-                 '--topological-graph)')
+            help='Output density of the graph')
+        parser.add_argument(
+            '--legend',
+            action='store_true',
+            default=False,
+            help='Output legend for the graph')
 
         parser.add_argument(
-            '--topological-graph-legend',
+            '--dot-cluster',
             action='store_true',
             default=False,
-            help='Output legend for topological graph (only affects '
-                 '--topological-graph)')
+            help='Cluster packages by their filesystem path (only affects '
+                 '--dot)')
         parser.add_argument(
-            '--topological-graph-dot-cluster',
+            '--dot-include-skipped',
             action='store_true',
             default=False,
-            help='Cluster packages by their filesystem path '
-                 '(only affects --topological-graph-dot)')
-        parser.add_argument(
-            '--topological-graph-dot-include-skipped',
-            action='store_true',
-            default=False,
-            help='Also output skipped packages (only affects '
-                 '--topological-graph-dot)')
+            help='Also output skipped packages (only affects --dot)')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
-        if args.topological_graph or args.topological_graph_dot:
-            args.topological_order = True
 
         descriptors = get_package_descriptors(args)
 
-        # always perform topological order for the select package extensions
         decorators = topological_order_packages(
             descriptors, recursive_categories=('run', ))
 
         select_package_decorators(args, decorators)
 
-        if args.topological_graph:
-            if args.topological_graph_legend:
+        if not args.dot:
+            if args.legend:
                 print('+ marks when the package in this row can be processed')
                 print('* marks a direct dependency '
                       'from the package indicated by the + in the same column '
@@ -143,7 +114,7 @@ class ListVerb(VerbExtensionPoint):
                         # package i doesn't depend on package j
                         lines[j] += ' '
                         empty_cells += 1
-            if args.topological_graph_density:
+            if args.density:
                 empty_fraction = \
                     empty_cells / (len(lines) * (len(lines) - 1)) \
                     if len(lines) > 1 else 1.0
@@ -152,7 +123,7 @@ class ListVerb(VerbExtensionPoint):
                 print('dependency density %.2f %%' % density_percentage)
                 print()
 
-        elif args.topological_graph_dot:
+        else:  # --dot
             lines = ['digraph graphname {']
 
             decorators_by_name = defaultdict(set)
@@ -161,7 +132,7 @@ class ListVerb(VerbExtensionPoint):
 
             selected_pkg_names = [
                 m.descriptor.name for m in decorators
-                if m.selected or args.topological_graph_dot_include_skipped]
+                if m.selected or args.dot_include_skipped]
             has_duplicate_names = \
                 len(selected_pkg_names) != len(set(selected_pkg_names))
             selected_pkg_names = set(selected_pkg_names)
@@ -169,7 +140,7 @@ class ListVerb(VerbExtensionPoint):
             # collect selected package decorators and their parent path
             nodes = OrderedDict()
             for deco in reversed(decorators):
-                if deco.selected or args.topological_graph_dot_include_skipped:
+                if deco.selected or args.dot_include_skipped:
                     nodes[deco] = Path(deco.descriptor.path).parent
 
             # collect direct dependencies
@@ -177,7 +148,7 @@ class ListVerb(VerbExtensionPoint):
             for deco in reversed(decorators):
                 if (
                     not deco.selected and
-                    not args.topological_graph_dot_include_skipped
+                    not args.dot_include_skipped
                 ):
                     continue
                 # iterate over dependency categories
@@ -233,7 +204,7 @@ class ListVerb(VerbExtensionPoint):
                     return decorator.descriptor.name, \
                         '' if (
                             decorator.selected or
-                            not args.topological_graph_dot_include_skipped
+                            not args.dot_include_skipped
                         ) else '[color = "gray" fontcolor = "gray"]'
                 # otherwise append the descriptor id to make each node unique
                 descriptor_id = id(decorator.descriptor)
@@ -244,12 +215,12 @@ class ListVerb(VerbExtensionPoint):
                     .format_map(locals()),
                 )
 
-            if not args.topological_graph_dot_cluster or common_path is None:
+            if not args.dot_cluster or common_path is None:
                 # output nodes
                 for deco in nodes.keys():
                     if (
                         not deco.selected and
-                        not args.topological_graph_dot_include_skipped
+                        not args.dot_include_skipped
                     ):
                         continue
                     node_name, attributes = get_node_data(deco)
@@ -301,26 +272,6 @@ class ListVerb(VerbExtensionPoint):
                             '[color="{colors}"{style}];'.format_map(locals()))
 
             lines.append('}')
-
-        else:
-            if not args.topological_order:
-                decorators = sorted(
-                    decorators, key=lambda d: d.descriptor.name)
-            lines = []
-            for decorator in decorators:
-                if not decorator.selected:
-                    continue
-                pkg = decorator.descriptor
-                if args.names_only:
-                    lines.append(pkg.name)
-                elif args.paths_only:
-                    lines.append(str(pkg.path))
-                else:
-                    lines.append(
-                        pkg.name + '\t' + str(pkg.path) + '\t(%s)' % pkg.type)
-            if not args.topological_order:
-                # output names and / or paths in alphabetical order
-                lines.sort()
 
         for line in lines:
             print(line)
