@@ -33,7 +33,8 @@ class GraphVerb(VerbExtensionPoint):
 
         add_packages_arguments(parser)
 
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             '--dot',
             action='store_true',
             default=False,
@@ -41,11 +42,12 @@ class GraphVerb(VerbExtensionPoint):
                  '(e.g. pass the output to dot: ` | dot -Tpng -o graph.png`), '
                  'legend: blue=build, red=run, tan=test, dashed=indirect')
 
-        parser.add_argument(
+        group.add_argument(
             '--density',
             action='store_true',
             default=False,
-            help='Output density of the graph')
+            help='Output density of the graph (only without --dot)')
+
         parser.add_argument(
             '--legend',
             action='store_true',
