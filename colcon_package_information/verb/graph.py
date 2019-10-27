@@ -254,21 +254,24 @@ class GraphVerb(VerbExtensionPoint):
 
             # output edges
             color_mapping = OrderedDict((
-                ('build', 'blue'),
-                ('run', 'red'),
-                ('test', 'tan'),
+                ('build', '#0000ff'),  # blue
+                ('run', '#ff0000'),  # red
+                ('test', '#d2b48c'),  # tan
             ))
             for style, edges in zip(
                 ('', ', style="dashed"'),
                 (direct_edges, indirect_edges),
             ):
                 for (deco_start, node_end), categories in edges.items():
-                    colors = ':'.join([
-                        color for category, color in color_mapping.items()
-                        if category in categories])
                     start_name, _ = get_node_data(deco_start)
                     for deco in decorators_by_name[node_end]:
                         end_name, _ = get_node_data(deco)
+                        edge_alpha = '' \
+                            if deco_start.selected and deco.selected else '77'
+                        colors = ':'.join([
+                            color + edge_alpha
+                            for category, color in color_mapping.items()
+                            if category in categories])
                         lines.append(
                             '  "{start_name}" -> "{end_name}" '
                             '[color="{colors}"{style}];'.format_map(locals()))
