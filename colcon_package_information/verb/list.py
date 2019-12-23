@@ -87,27 +87,29 @@ class ListVerb(VerbExtensionPoint):
         select_package_decorators(args, decorators)
 
         if args.topological_graph:
-            print('[colcon list -g] has been deprecated, please use [colcon graph]')
+            print('[colcon list -g] has been deprecated, '
+                  'please use [colcon graph]')
             return
         elif args.topological_graph_dot:
             print('[colcon list --topological-graph-dot] has been deprecated, '
                   'please use [colcon graph --dot]')
             return
         elif args.topological_graph_density:
-            print('[colcon list --topological-graph-density] has been deprecated, '
-                  'please use [colcon graph --density]')
+            print('[colcon list --topological-graph-density] has been '
+                  'deprecated, please use [colcon graph --density]')
             return
         elif args.topological_graph_legend:
-            print('[colcon list --topological-graph-legend] has been deprecated, '
-                  'please use [colcon graph --legend]')
+            print('[colcon list --topological-graph-legend] has been '
+                  'deprecated, please use [colcon graph --legend]')
             return
         elif args.topological_graph_dot_cluster:
-            print('[colcon list --topological-graph-dot-cluster] has been deprecated, '
-                  'please use [colcon graph --dot-cluster]')
+            print('[colcon list --topological-graph-dot-cluster] has been '
+                  'deprecated, please use [colcon graph --dot-cluster]')
             return
         elif args.topological_graph_dot_include_skipped:
-            print('[colcon list --topological-graph-dot-include-skipped] has been deprecated, '
-                  'please use [colcon graph --dot-include-skipped]')
+            print('[colcon list --topological-graph-dot-include-skipped] has '
+                  'been deprecated, please use [colcon graph '
+                  '--dot-include-skipped]')
             return
 
         if not args.topological_order:
