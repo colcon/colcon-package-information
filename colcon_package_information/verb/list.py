@@ -87,29 +87,28 @@ class ListVerb(VerbExtensionPoint):
         select_package_decorators(args, decorators)
 
         if args.topological_graph:
-            print('[colcon list -g] has been deprecated, '
+            print('[colcon list -g] is obsolete, '
                   'please use [colcon graph]')
             return 1
         elif args.topological_graph_dot:
-            print('[colcon list --topological-graph-dot] has been deprecated, '
+            print('[colcon list --topological-graph-dot] is obsolete, '
                   'please use [colcon graph --dot]')
             return 1
         elif args.topological_graph_density:
-            print('[colcon list --topological-graph-density] has been '
-                  'deprecated, please use [colcon graph --density]')
+            print('[colcon list --topological-graph-density] is '
+                  'obsolete, please use [colcon graph --density]')
             return 1
         elif args.topological_graph_legend:
-            print('[colcon list --topological-graph-legend] has been '
-                  'deprecated, please use [colcon graph --legend]')
+            print('[colcon list --topological-graph-legend] is '
+                  'obsolete, please use [colcon graph --legend]')
             return 1
         elif args.topological_graph_dot_cluster:
-            print('[colcon list --topological-graph-dot-cluster] has been '
-                  'deprecated, please use [colcon graph --dot-cluster]')
+            print('[colcon list --topological-graph-dot-cluster] is '
+                  'obsolete, please use [colcon graph --dot-cluster]')
             return 1
         elif args.topological_graph_dot_include_skipped:
-            print('[colcon list --topological-graph-dot-include-skipped] has '
-                  'been deprecated, please use [colcon graph '
-                  '--dot-include-skipped]')
+            print('[colcon list --topological-graph-dot-include-skipped] is '
+                  'obsolete, please use [colcon graph --dot-include-skipped]')
             return 1
 
         if not args.topological_order:
