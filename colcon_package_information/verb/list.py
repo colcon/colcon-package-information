@@ -48,32 +48,32 @@ class ListVerb(VerbExtensionPoint):
             '--topological-graph', '-g',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph`')
+            help='Obsolete, use `colcon graph`')
         group.add_argument(
             '--topological-graph-dot',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph --dot`')
+            help='Obsolete, use `colcon graph --dot`')
         parser.add_argument(
             '--topological-graph-density',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph --density`')
+            help='Obsolete, use `colcon graph --density`')
         parser.add_argument(
             '--topological-graph-legend',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph --legend`')
+            help='Obsolete, use `colcon graph --legend`')
         parser.add_argument(
             '--topological-graph-dot-cluster',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph --dot-cluster`')
+            help='Obsolete, use `colcon graph --dot-cluster`')
         parser.add_argument(
             '--topological-graph-dot-include-skipped',
             action='store_true',
             default=False,
-            help='Deprecated, use `colcon graph --dot-include-skipped`')
+            help='Obsolete, use `colcon graph --dot-include-skipped`')
 
     def main(self, *, context):  # noqa: D102
         args = context.args
@@ -89,28 +89,28 @@ class ListVerb(VerbExtensionPoint):
         if args.topological_graph:
             print('[colcon list -g] has been deprecated, '
                   'please use [colcon graph]')
-            return
+            return 1
         elif args.topological_graph_dot:
             print('[colcon list --topological-graph-dot] has been deprecated, '
                   'please use [colcon graph --dot]')
-            return
+            return 1
         elif args.topological_graph_density:
             print('[colcon list --topological-graph-density] has been '
                   'deprecated, please use [colcon graph --density]')
-            return
+            return 1
         elif args.topological_graph_legend:
             print('[colcon list --topological-graph-legend] has been '
                   'deprecated, please use [colcon graph --legend]')
-            return
+            return 1
         elif args.topological_graph_dot_cluster:
             print('[colcon list --topological-graph-dot-cluster] has been '
                   'deprecated, please use [colcon graph --dot-cluster]')
-            return
+            return 1
         elif args.topological_graph_dot_include_skipped:
             print('[colcon list --topological-graph-dot-include-skipped] has '
                   'been deprecated, please use [colcon graph '
                   '--dot-include-skipped]')
-            return
+            return 1
 
         if not args.topological_order:
             decorators = sorted(
