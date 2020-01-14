@@ -1,6 +1,7 @@
 # Copyright 2016-2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
+from colcon_core.command import get_prog_name
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
 from colcon_core.package_selection import get_package_descriptors
@@ -44,36 +45,60 @@ class ListVerb(VerbExtensionPoint):
             action='store_true',
             default=False,
             help='Output only the path of each package but not the name')
-        group.add_argument(
+
+        group = parser.add_argument_group('Obsolete arguments')
+        command_name = get_prog_name()
+        self._add_obsolete_argument(
+            group,
             '--topological-graph', '-g',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph`')
-        group.add_argument(
+            help='Instead use `{command_name} graph`'.format_map(locals()))
+        self._add_obsolete_argument(
+            group,
             '--topological-graph-dot',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph --dot`')
-        parser.add_argument(
+            help='Instead use `{command_name} graph --dot`'
+                 .format_map(locals()))
+        self._add_obsolete_argument(
+            group,
             '--topological-graph-density',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph --density`')
-        parser.add_argument(
+            help='Instead use `{command_name} graph --density`'
+                 .format_map(locals()))
+        self._add_obsolete_argument(
+            group,
             '--topological-graph-legend',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph --legend`')
-        parser.add_argument(
+            help='Instead use `{command_name} graph --legend`'
+                 .format_map(locals()))
+        self._add_obsolete_argument(
+            group,
             '--topological-graph-dot-cluster',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph --dot-cluster`')
-        parser.add_argument(
+            help='Instead use `{command_name} graph --dot --dot-cluster`'
+                 .format_map(locals()))
+        self._add_obsolete_argument(
+            group,
             '--topological-graph-dot-include-skipped',
             action='store_true',
             default=False,
-            help='Obsolete, use `colcon graph --dot-include-skipped`')
+            help='Instead use `{command_name} graph --dot '
+                 '--dot-include-skipped`'.format_map(locals()))
+
+    def _add_obsolete_argument(self, group, *args, **kwargs):
+        arg = group.add_argument(*args, **kwargs)
+        try:
+            from argcomplete.completers import SuppressCompleter
+        except ImportError:
+            pass
+        else:
+            arg.completer = SuppressCompleter()
+        return arg
 
     def main(self, *, context):  # noqa: D102
         args = context.args
