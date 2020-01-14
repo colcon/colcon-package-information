@@ -111,30 +111,39 @@ class ListVerb(VerbExtensionPoint):
 
         select_package_decorators(args, decorators)
 
+        if args.topological_graph or args.topological_graph_dot:
+            additional_options = []
+            if args.topological_graph_density:
+                additional_options.append('--density')
+            if args.topological_graph_legend:
+                additional_options.append('--legend')
+            if args.topological_graph_dot:
+                if args.topological_graph_dot_cluster:
+                    additional_options.append('--dot-cluster')
+                if args.topological_graph_dot_include_skipped:
+                    additional_options.append('--dot-include-skipped')
+            additional_options = ''.join(' ' + x for x in additional_options)
         if args.topological_graph:
-            print('[colcon list -g] is obsolete, '
-                  'please use [colcon graph]')
-            return 1
-        elif args.topological_graph_dot:
-            print('[colcon list --topological-graph-dot] is obsolete, '
-                  'please use [colcon graph --dot]')
-            return 1
-        elif args.topological_graph_density:
-            print('[colcon list --topological-graph-density] is '
-                  'obsolete, please use [colcon graph --density]')
-            return 1
-        elif args.topological_graph_legend:
-            print('[colcon list --topological-graph-legend] is '
-                  'obsolete, please use [colcon graph --legend]')
-            return 1
-        elif args.topological_graph_dot_cluster:
-            print('[colcon list --topological-graph-dot-cluster] is '
-                  'obsolete, please use [colcon graph --dot-cluster]')
-            return 1
-        elif args.topological_graph_dot_include_skipped:
-            print('[colcon list --topological-graph-dot-include-skipped] is '
-                  'obsolete, please use [colcon graph --dot-include-skipped]')
-            return 1
+            return 'The {args.verb_name} options --topological-graph / -g ' \
+                'are obsolete, instead use `{context.command_name} graph' \
+                '{additional_options}`'.format_map(locals())
+        if args.topological_graph_dot:
+            return 'The {args.verb_name} option --topological-graph-dot is ' \
+                'obsolete, instead use `{context.command_name} graph --dot' \
+                '{additional_options}`'.format_map(locals())
+        if args.topological_graph_density:
+            return 'The option --topological-graph-density must be used ' \
+                'together with either --topological-graph or ' \
+                '--topological-graph-dot'
+        if args.topological_graph_legend:
+            return 'The option --topological-graph-legend must be used ' \
+                ' with either --topological-graph or --topological-graph-dot'
+        if args.topological_graph_dot_cluster:
+            return 'The option --topological-graph-dot-cluster must be used ' \
+                'together with --topological-graph-dot'
+        if args.topological_graph_dot_include_skipped:
+            return 'The option --topological-graph-dot-include-skipped must ' \
+                'be used together with --topological-graph-dot'
 
         if not args.topological_order:
             decorators = sorted(
