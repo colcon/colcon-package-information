@@ -133,7 +133,7 @@ class ListVerb(VerbExtensionPoint):
                 '{additional_options}`'.format_map(locals())
         if args.topological_graph_density:
             return 'The option --topological-graph-density must be used ' \
-                'together with either --topological-graph'
+                'together with --topological-graph'
         if args.topological_graph_legend:
             return 'The option --topological-graph-legend must be used ' \
                 ' with either --topological-graph or --topological-graph-dot'
