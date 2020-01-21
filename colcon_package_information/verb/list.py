@@ -113,15 +113,15 @@ class ListVerb(VerbExtensionPoint):
 
         if args.topological_graph or args.topological_graph_dot:
             additional_options = []
-            if args.topological_graph_density:
-                additional_options.append('--density')
-            if args.topological_graph_legend:
-                additional_options.append('--legend')
             if args.topological_graph_dot:
                 if args.topological_graph_dot_cluster:
                     additional_options.append('--dot-cluster')
                 if args.topological_graph_dot_include_skipped:
                     additional_options.append('--dot-include-skipped')
+            elif args.topological_graph_density:
+                additional_options.append('--density')
+            if args.topological_graph_legend:
+                additional_options.append('--legend')
             additional_options = ''.join(' ' + x for x in additional_options)
         if args.topological_graph:
             return 'The {args.verb_name} options --topological-graph / -g ' \
@@ -133,8 +133,7 @@ class ListVerb(VerbExtensionPoint):
                 '{additional_options}`'.format_map(locals())
         if args.topological_graph_density:
             return 'The option --topological-graph-density must be used ' \
-                'together with either --topological-graph or ' \
-                '--topological-graph-dot'
+                'together with either --topological-graph'
         if args.topological_graph_legend:
             return 'The option --topological-graph-legend must be used ' \
                 ' with either --topological-graph or --topological-graph-dot'
