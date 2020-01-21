@@ -1,6 +1,8 @@
 apache
+argcomplete
 colcon
 commonpath
+completers
 decos
 defaultdict
 deps
