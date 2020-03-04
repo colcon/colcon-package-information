@@ -65,22 +65,21 @@ class CheckDependencyConstraintPackageAugmentation(
             'version_gte': (gte, 'greater than or equal to'),
             'version_gt': (operator.gt, 'greater than'),
         }
-        logger.log(
-            1,
-            desc.name + ' depends on ' + dep.name +
-            ' which has version ' + dep_desc.metadata['version'] +
-            ': constraints ' + str(dep.metadata))
         for key, value in dep.metadata.items():
             # only consider version operator metadata
             if key not in operators:
                 continue
+            op, msg = operators[key]
             try:
                 version_constraint = parse_version(value)
             except Exception:
+                logger.error(
+                    "Failed to parse version '" + value + "' with " +
+                    "constraint '" + msg + "' for dependency " + dep.name +
+                    ' in package ' + desc.name)
                 # skip check if the version fails to parse
                 continue
 
-            op, msg = operators[key]
             if not op(dep_version, version_constraint):
                 logger.warning(
                     desc.name + ' depends on ' + dep.name +
