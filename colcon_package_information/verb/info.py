@@ -1,6 +1,7 @@
 # Copyright 2016-2018 Dirk Thomas
 # Licensed under the Apache License, Version 2.0
 
+import argparse
 import sys
 
 from colcon_core.package_decorator import add_recursive_dependencies
@@ -23,6 +24,7 @@ class InfoVerb(VerbExtensionPoint):
     def add_arguments(self, *, parser):  # noqa: D102
         parser.add_argument(
             'package_names', nargs='*', metavar='PKG_NAME',
+            type=argument_package_name,
             help='Only show the information of a subset of packages')
 
         # only added so that package selection arguments can be used
@@ -81,3 +83,20 @@ class InfoVerb(VerbExtensionPoint):
                     print(
                         '    {key}: {value}'
                         .format_map(locals()))
+
+
+def argument_package_name(value):
+    """
+    Check if an argument is a valid package name.
+
+    Used as a ``type`` callback in ``add_argument()`` calls.
+    Package names starting with a dash must be prefixed with a space to avoid
+    collisions with command line arguments.
+
+    :param str value: The command line argument
+    :returns: The package name
+    :raises argparse.ArgumentTypeError: if the value starts with a dash
+    """
+    if value.startswith('-'):
+        raise argparse.ArgumentTypeError('unrecognized argument: ' + value)
+    return value.lstrip()

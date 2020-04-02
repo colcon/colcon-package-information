@@ -1,5 +1,6 @@
 apache
 argcomplete
+argparse
 colcon
 commonpath
 completers
@@ -12,6 +13,7 @@ graphname
 iterdir
 itertools
 ljust
+lstrip
 nargs
 noqa
 pathlib
