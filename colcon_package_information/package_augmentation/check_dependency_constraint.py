@@ -47,7 +47,7 @@ class CheckDependencyConstraintPackageAugmentation(
             return
         try:
             dep_version = parse_version(dep_desc.metadata['version'])
-        except Exception:
+        except Exception:  # noqa: B902
             # skip check if the version fails to parse
             return
 
@@ -72,7 +72,7 @@ class CheckDependencyConstraintPackageAugmentation(
             op, msg = operators[key]
             try:
                 version_constraint = parse_version(value)
-            except Exception:
+            except Exception:  # noqa: B902
                 logger.error(
                     "Failed to parse version '" + value + "' with " +
                     "constraint '" + msg + "' for dependency " + dep.name +
