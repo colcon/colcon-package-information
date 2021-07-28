@@ -4,13 +4,12 @@
 import argparse
 import sys
 
-from colcon_core.package_decorator import add_recursive_dependencies
-from colcon_core.package_decorator import get_decorators
 from colcon_core.package_selection import add_arguments \
     as add_packages_arguments
 from colcon_core.package_selection import get_package_descriptors
 from colcon_core.package_selection import select_package_decorators
 from colcon_core.plugin_system import satisfies_version
+from colcon_core.topological_order import topological_order_packages
 from colcon_core.verb import VerbExtensionPoint
 
 
@@ -39,9 +38,8 @@ class InfoVerb(VerbExtensionPoint):
     def main(self, *, context):  # noqa: D102
         descriptors = get_package_descriptors(
             context.args, additional_argument_names=['*'])
-        decorators = get_decorators(descriptors)
-        add_recursive_dependencies(
-            decorators, recursive_categories=('run', ))
+        decorators = topological_order_packages(
+            descriptors, recursive_categories=('run', ))
         select_package_decorators(context.args, decorators)
 
         if context.args.package_names:
