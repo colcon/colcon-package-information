@@ -26,9 +26,9 @@ class CheckDependencyConstraintPackageAugmentation(
         satisfies_version(
             PackageAugmentationExtensionPoint.EXTENSION_POINT_VERSION, '^1.0')
 
-    def augment_packages(
+    def augment_packages(  # noqa: D102
         self, descs, *, additional_argument_names=None
-    ):  # noqa: D102
+    ):
         descs_dict = {desc.name: desc for desc in descs}
         for name, desc in descs_dict.items():
             deps = desc.get_dependencies()
