@@ -12,12 +12,14 @@ fontcolor
 graphname
 iterdir
 itertools
+linter
 ljust
 lstrip
 nargs
 noqa
 pathlib
 plugin
+pydocstyle
 pytest
 rdep
 scspell
