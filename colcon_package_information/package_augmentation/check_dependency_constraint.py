@@ -7,7 +7,7 @@ from colcon_core.package_augmentation import logger as \
     package_augmentation_logger
 from colcon_core.package_augmentation import PackageAugmentationExtensionPoint
 from colcon_core.plugin_system import satisfies_version
-from pkg_resources import parse_version
+from packaging.version import Version
 
 logger = package_augmentation_logger.getChild('check_dependency_constraint')
 
@@ -46,7 +46,7 @@ class CheckDependencyConstraintPackageAugmentation(
         if 'version' not in dep_desc.metadata:
             return
         try:
-            dep_version = parse_version(dep_desc.metadata['version'])
+            dep_version = Version(dep_desc.metadata['version'])
         except Exception:  # noqa: B902
             # skip check if the version fails to parse
             return
@@ -71,7 +71,7 @@ class CheckDependencyConstraintPackageAugmentation(
                 continue
             op, msg = operators[key]
             try:
-                version_constraint = parse_version(value)
+                version_constraint = Version(value)
             except Exception:  # noqa: B902
                 logger.error(
                     "Failed to parse version '" + value + "' with " +
