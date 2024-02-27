@@ -27,3 +27,4 @@ setuptools
 subgraph
 thomas
 tpng
+unittest
