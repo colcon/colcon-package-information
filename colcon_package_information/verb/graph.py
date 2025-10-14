@@ -199,8 +199,6 @@ class GraphVerb(VerbExtensionPoint):
                 common_path = None
 
             def get_node_data(decorator):
-                nonlocal args
-                nonlocal has_duplicate_names
                 if not has_duplicate_names:
                     # use name where possible so the dot code is easy to read
                     return decorator.descriptor.name, \
