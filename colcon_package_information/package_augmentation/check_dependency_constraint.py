@@ -2,6 +2,7 @@
 # Licensed under the Apache License, Version 2.0
 
 import operator
+import re
 
 from colcon_core.package_augmentation import logger as \
     package_augmentation_logger
@@ -10,6 +11,12 @@ from colcon_core.plugin_system import satisfies_version
 from packaging.version import Version
 
 logger = package_augmentation_logger.getChild('check_dependency_constraint')
+
+
+def _wildcard_to_regex(pattern):
+    pattern = re.escape(pattern)
+    pattern = pattern.replace(r'\*', '.*')
+    return re.compile(f'^{pattern}$')
 
 
 class CheckDependencyConstraintPackageAugmentation(
@@ -57,21 +64,25 @@ class CheckDependencyConstraintPackageAugmentation(
         def gte(a, b):
             return operator.gt(a, b) or operator.eq(a, b)
 
+        def wild(a, b):
+            return bool(b.match(str(a)))
+
         operators = {
-            'version_lt': (operator.lt, 'less than'),
-            'version_lte': (lte, 'less than or equal to'),
-            'version_eq': (operator.eq, 'equal to'),
-            'version_neq': (operator.ne, 'not equal to'),
-            'version_gte': (gte, 'greater than or equal to'),
-            'version_gt': (operator.gt, 'greater than'),
+            'version_lt': (operator.lt, 'less than', Version),
+            'version_lte': (lte, 'less than or equal to', Version),
+            'version_eq': (operator.eq, 'equal to', Version),
+            'version_neq': (operator.ne, 'not equal to', Version),
+            'version_gte': (gte, 'greater than or equal to', Version),
+            'version_gt': (operator.gt, 'greater than', Version),
+            'version_wild': (wild, 'a mismatch for', _wildcard_to_regex),
         }
         for key, value in dep.metadata.items():
             # only consider version operator metadata
             if key not in operators:
                 continue
-            op, msg = operators[key]
+            op, msg, conversion = operators[key]
             try:
-                version_constraint = Version(value)
+                version_constraint = conversion(value)
             except Exception:  # noqa: B902
                 logger.error(
                     "Failed to parse version '" + value + "' with " +

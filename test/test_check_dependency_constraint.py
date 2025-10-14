@@ -116,3 +116,38 @@ def test_dependency_invalid_version_operator():
 
     extension = CheckDependencyConstraintPackageAugmentation()
     extension.augment_packages({pkg_a, pkg_b})
+
+
+@pytest.mark.parametrize(
+    'pattern,expect_mismatch', [
+        (None,      0),
+        ('1.2.3',   0),
+        ('1.2.4',   1),
+        ('1.2.4.1', 1),
+        ('1.2.*',   0),
+        ('1.3.*',   1),
+        ('1.*.3',   0),
+        ('1.*.4',   1),
+    ])
+def test_dependency_wild(pattern, expect_mismatch):
+    pkg_a = PackageDescriptor('/tmp/pkg_a')
+    pkg_a.name = 'pkg_a'
+    pkg_a.metadata['version'] = '1.2.3'
+
+    pkg_a_dep = DependencyDescriptor('pkg_a')
+    if pattern is not None:
+        pkg_a_dep.metadata['version_wild'] = pattern
+
+    pkg_b = PackageDescriptor('/tmp/pkg_b')
+    pkg_b.name = 'pkg_b'
+    pkg_b.dependencies['build'] = {pkg_a_dep}
+
+    extension = CheckDependencyConstraintPackageAugmentation()
+
+    with patch(
+        'colcon_package_information.package_augmentation.'
+        'check_dependency_constraint.logger.warning'
+    ) as warning:
+        extension.augment_packages({pkg_a, pkg_b})
+        assert expect_mismatch == warning.call_count
+        warning.reset_mock()
