@@ -29,18 +29,37 @@ class CheckDependencyConstraintPackageAugmentation(
     def augment_packages(  # noqa: D102
         self, descs, *, additional_argument_names=None
     ):
-        descs_dict = {desc.name: desc for desc in descs}
-        for name, desc in descs_dict.items():
+        descs_dict = {}
+        for desc in descs:
+            descs_dict.setdefault(desc.name, []).append(desc)
+        for desc in descs:
             deps = desc.get_dependencies()
             for dep in deps:
                 # skip dependencies which don't have a descriptor
                 if dep.name not in descs_dict:
                     continue
 
-                self._check_version_constraints(
-                    desc, dep, descs_dict[dep.name])
+                miss = all(
+                    self._check_version_constraints(desc, dep, dep_desc)
+                    for dep_desc in descs_dict.get(dep.name, ()))
+                if miss and dep.metadata.get('skip_incompatible'):
+                    logger.warning(
+                        'Dropping version-incompatible dependency on ' +
+                        dep.name + ' from ' + desc.name)
+                    for category in dep.metadata.get('categories') or ():
+                        desc.dependencies[category].remove(dep)
 
     def _check_version_constraints(self, desc, dep, dep_desc):
+        """
+        Check dependency version constraints against another package.
+
+        :param desc: The package declaring the dependency being checked
+        :param dep: The dependency being checked
+        :param dep_desc: The package to which the dependency refers
+
+        :returns: True if one or more constraints fail, False if all
+          constraints pass, and None if no constraints were checked.
+        """
         # if the dependency descriptor doesn't have a version there is nothing
         # to compare to
         if 'version' not in dep_desc.metadata:
@@ -65,6 +84,7 @@ class CheckDependencyConstraintPackageAugmentation(
             'version_gte': (gte, 'greater than or equal to'),
             'version_gt': (operator.gt, 'greater than'),
         }
+        miss = None
         for key, value in dep.metadata.items():
             # only consider version operator metadata
             if key not in operators:
@@ -81,12 +101,15 @@ class CheckDependencyConstraintPackageAugmentation(
                 continue
 
             if not op(dep_version, version_constraint):
+                miss = miss or True
                 logger.warning(
                     desc.name + ' depends on ' + dep.name +
                     ' which has version ' + dep_desc.metadata['version'] +
                     ' but expects it to be ' + msg + ' ' + value)
             else:
+                miss = miss or False
                 logger.debug(
                     desc.name + ' depends on ' + dep.name +
                     ' which has version ' + dep_desc.metadata['version'] +
                     ' which satisfies to be ' + msg + ' ' + value)
+        return miss
