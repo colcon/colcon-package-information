@@ -101,7 +101,7 @@ class CheckDependencyConstraintPackageAugmentation(
                 continue
 
             if not op(dep_version, version_constraint):
-                miss = miss or True
+                miss = True
                 logger.warning(
                     desc.name + ' depends on ' + dep.name +
                     ' which has version ' + dep_desc.metadata['version'] +
