@@ -116,3 +116,47 @@ def test_dependency_invalid_version_operator():
 
     extension = CheckDependencyConstraintPackageAugmentation()
     extension.augment_packages({pkg_a, pkg_b})
+
+
+@pytest.mark.parametrize(
+    'a_versions,skip_incompatible,dep_categories,expect_present', [
+        (['1.0'],        True,  {'build'},        False),
+        (['1.0', '3.0'], True,  {'build'},        False),
+        (['1.0', '2.0'], True,  {'build'},        True),
+        (['1.0'],        False, {'build'},        True),
+        (['1.0'],        True,  {'build', 'run'}, False),
+        ([None],         True,  {'build'},        True),
+    ])
+def test_skip_incompatible(
+    a_versions, skip_incompatible, dep_categories, expect_present
+):
+    descs = set()
+    for i, v in enumerate(a_versions):
+        pkg_a = PackageDescriptor(f'/tmp/pkg_a_{i}')
+        pkg_a.name = 'pkg_a'
+        if v is not None:
+            pkg_a.metadata['version'] = v
+        descs.add(pkg_a)
+
+    metadata = {
+        'version_eq': '2.0',
+        'skip_incompatible': skip_incompatible,
+        'categories': dep_categories,
+    }
+    pkg_a_dep = DependencyDescriptor('pkg_a', metadata=metadata)
+
+    pkg_b = PackageDescriptor('/tmp/pkg_b')
+    pkg_b.name = 'pkg_b'
+    for cat in dep_categories:
+        pkg_b.dependencies[cat] = {pkg_a_dep}
+
+    descs.add(pkg_b)
+
+    extension = CheckDependencyConstraintPackageAugmentation()
+    extension.augment_packages(descs)
+
+    for cat in dep_categories:
+        if expect_present:
+            assert pkg_a_dep in pkg_b.dependencies[cat]
+        else:
+            assert pkg_a_dep not in pkg_b.dependencies.get(cat, set())
