@@ -47,7 +47,7 @@ class CheckDependencyConstraintPackageAugmentation(
                         'Dropping version-incompatible dependency on ' +
                         dep.name + ' from ' + desc.name)
                     for category in dep.metadata.get('categories') or ():
-                        desc.dependencies[category].remove(dep)
+                        desc.dependencies[category].discard(dep)
 
     def _check_version_constraints(self, desc, dep, dep_desc):
         """
